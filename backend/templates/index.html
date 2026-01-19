@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
+<head>  
     <meta charset="UTF-8">
     <title>Mini-app тестовый интерфейс</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -164,6 +165,25 @@
 </div>
  
 <script>
+(function initTelegram() {
+    try {
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg) return;
+
+        tg.expand(); // делает webapp на весь экран
+
+        const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+        if (user && user.id) {
+            const tgInput = document.getElementById("tg_id");
+            tgInput.value = user.id;
+            tgInput.readOnly = true; // чтобы не трогали руками
+        }
+    } catch (e) {
+        console.log("Telegram WebApp init error", e);
+    }
+})();
+
+
 function getCurrentTgId() {
     const v = document.getElementById("tg_id").value;
     return v ? Number(v) : null;
