@@ -26,6 +26,8 @@ class ProfileIn(BaseModel):
     drinks: Optional[str] = None
     topics: Optional[str] = None
     location: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
  
  
 class ProfileOut(ProfileIn):
@@ -91,16 +93,17 @@ async def health():
 def create_or_update_profile(profile: ProfileIn):
     conn = get_connection()
     cur = conn.cursor()
- 
+
     cur.execute("SELECT id FROM users WHERE tg_id = ?", (profile.tg_id,))
     row = cur.fetchone()
- 
+
     if row:
         cur.execute(
             """
             UPDATE users
             SET first_name = ?, last_name = ?, middle_name = ?, age = ?,
-                about = ?, drinks = ?, topics = ?, location = ?
+                about = ?, drinks = ?, topics = ?, location = ?,
+                lat = ?, lon = ?
             WHERE tg_id = ?
             """,
             (
@@ -112,6 +115,8 @@ def create_or_update_profile(profile: ProfileIn):
                 profile.drinks,
                 profile.topics,
                 profile.location,
+                profile.lat,
+                profile.lon,
                 profile.tg_id,
             ),
         )
@@ -121,9 +126,9 @@ def create_or_update_profile(profile: ProfileIn):
             """
             INSERT INTO users (
                 tg_id, first_name, last_name, middle_name, age,
-                about, drinks, topics, location
+                about, drinks, topics, location, balance, is_subscribed, lat, lon
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)
             """,
             (
                 profile.tg_id,
@@ -135,16 +140,18 @@ def create_or_update_profile(profile: ProfileIn):
                 profile.drinks,
                 profile.topics,
                 profile.location,
+                profile.lat,
+                profile.lon,
             ),
         )
         user_id = cur.lastrowid
- 
+
     conn.commit()
- 
+
     cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     row = cur.fetchone()
     conn.close()
- 
+
     return ProfileOut(**row)
  
  

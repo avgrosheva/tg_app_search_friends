@@ -124,6 +124,12 @@
  
             <label>Локация</label>
             <input id="location" name="location" type="text">
+
+            <label>Геопозиция</label>
+            <div id="geo_display">Не определена</div>
+            <button type="button" onclick="requestLocation()">Определить геопозицию</button>
+            <input id="lat" type="hidden">
+            <input id="lon" type="hidden">
  
             <label>Баланс</label>
             <div id="balance_display">0 ₽</div>
@@ -239,7 +245,9 @@ async function saveProfile(e) {
         about: about.value || null,
         drinks: drinks.value || null,
         topics: topics.value || null,
-        location: location.value || null
+        location: location.value || null,
+        lat: lat.value ? Number(lat.value) : null,
+        lon: lon.value ? Number(lon.value) : null
     };
  
     const res = await fetch("/api/profile", {
@@ -261,34 +269,74 @@ async function loadUsers() {
     const res = await fetch("/api/users");
     const users = await res.json();
     const my = getCurrentTgId();
- 
+
+    const myLat = parseFloat(document.getElementById("lat").value);
+    const myLon = parseFloat(document.getElementById("lon").value);
+
     const root = document.getElementById("users");
     root.innerHTML = "";
- 
-    users.forEach(u => {
+
+    let enriched = users.map(u => {
+        let dist = null;
+        if (!isNaN(myLat) && !isNaN(myLon) && u.lat !== null && u.lon !== null) {
+            dist = distanceKm(myLat, myLon, u.lat, u.lon);
+        }
+        return { ...u, distance_km: dist };
+    });
+
+    // сортируем: сначала те, у кого есть distance_km
+    enriched.sort((a, b) => {
+        if (a.distance_km == null && b.distance_km == null) return 0;
+        if (a.distance_km == null) return 1;
+        if (b.distance_km == null) return -1;
+        return a.distance_km - b.distance_km;
+    });
+
+    enriched.forEach(u => {
         const div = document.createElement("div");
         div.className = "user-card";
-        div.innerHTML = `
-            <div class="user-name">${u.first_name}${u.age ? ", "+u.age : ""}</div>
-            <div class="user-meta">${u.location || "нет локации"}</div>
-        `;
- 
+
+        let title = u.first_name;
+        if (u.age) title += ", " + u.age;
+
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "user-name";
+        nameDiv.textContent = title;
+
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "user-meta";
+
+        let locText = u.location || "нет локации";
+        if (u.distance_km != null) {
+            const km = u.distance_km;
+            if (km < 1) {
+                locText += `• ~${Math.round(km * 1000)} м`;
+            } else {
+                locText += `• ~${km.toFixed(1)} км`;
+            }
+        }
+
+        metaDiv.textContent = locText;
+
+        div.appendChild(nameDiv);
+        div.appendChild(metaDiv);
+
         if (my && u.tg_id !== my) {
             const inviteBtn = document.createElement("button");
             inviteBtn.textContent = "Пригласить";
             inviteBtn.onclick = () => sendInvite(my, u.tg_id);
- 
+
             const chatBtn = document.createElement("button");
             chatBtn.textContent = "Чат";
             chatBtn.onclick = () => {
                 document.getElementById("chat_with").value = u.tg_id;
                 loadChat();
             };
- 
+
             div.appendChild(inviteBtn);
             div.appendChild(chatBtn);
         }
- 
+
         root.appendChild(div);
     });
 }
@@ -364,6 +412,46 @@ async function loadChat() {
 document.getElementById("profile-form").addEventListener("submit", saveProfile);
  
 setInterval(loadChat, 2000);
+
+function requestLocation() {
+    const geoDisplay = document.getElementById("geo_display");
+
+    // 1. Пытаемся через браузерное гео (работает и внутри WebView Телеграма)
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                document.getElementById("lat").value = latitude;
+                document.getElementById("lon").value = longitude;
+                geoDisplay.textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+            },
+            (err) => {
+                console.log("Geolocation error", err);
+                alert("Не удалось получить геопозицию. Разрешите доступ к геоданным.");
+            }
+        );
+        return;
+    }
+
+    // запасной вариант — если гео совсем недоступно
+    alert("Геолокация недоступна в этом окружении.");
+}
+
+function distanceKm(lat1, lon1, lat2, lon2) {
+    function toRad(x) { return x * Math.PI / 180; }
+
+    const R = 6371; // радиус Земли в км
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.pow(Math.sin(dLat / 2), 1) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // в км
+}
+
 </script>
 </body>
 </html>

@@ -15,6 +15,7 @@ def init_db():
     cur = conn.cursor()
 
     # пользователи
+# пользователи
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS users (
@@ -29,7 +30,9 @@ def init_db():
             topics TEXT,
             location TEXT,
             balance REAL DEFAULT 0,
-            is_subscribed INTEGER DEFAULT 0
+            is_subscribed INTEGER DEFAULT 0,
+            lat REAL,
+            lon REAL
         );
         """
     )
