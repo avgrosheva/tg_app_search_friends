@@ -171,6 +171,13 @@
 </div>
  
 <script>
+
+let inviteStatus = {
+    sent: {},     
+    received: {}, 
+    match: {}    
+};
+
 (function initTelegram() {
     try {
         const tg = window.Telegram && window.Telegram.WebApp;
@@ -270,8 +277,8 @@ async function loadUsers() {
     const users = await res.json();
     const my = getCurrentTgId();
 
-    const myLat = parseFloat(document.getElementById("lat").value);
-    const myLon = parseFloat(document.getElementById("lon").value);
+    const myLat = parseFloat(document.getElementById("lat")?.value || "NaN");
+    const myLon = parseFloat(document.getElementById("lon")?.value || "NaN");
 
     const root = document.getElementById("users");
     root.innerHTML = "";
@@ -284,7 +291,7 @@ async function loadUsers() {
         return { ...u, distance_km: dist };
     });
 
-    // сортируем: сначала те, у кого есть distance_km
+
     enriched.sort((a, b) => {
         if (a.distance_km == null && b.distance_km == null) return 0;
         if (a.distance_km == null) return 1;
@@ -322,24 +329,49 @@ async function loadUsers() {
         div.appendChild(metaDiv);
 
         if (my && u.tg_id !== my) {
-            const inviteBtn = document.createElement("button");
-            inviteBtn.textContent = "Пригласить";
-            inviteBtn.onclick = () => sendInvite(my, u.tg_id);
+            const actions = document.createElement("div");
+            actions.style.marginTop = "6px";
+            actions.style.display = "flex";
+            actions.style.gap = "6px";
 
-            const chatBtn = document.createElement("button");
-            chatBtn.textContent = "Чат";
-            chatBtn.onclick = () => {
-                document.getElementById("chat_with").value = u.tg_id;
-                loadChat();
-            };
+            const otherId = u.tg_id;
 
-            div.appendChild(inviteBtn);
-            div.appendChild(chatBtn);
+            if (inviteStatus.match[otherId]) {
+                const chatBtn = document.createElement("button");
+                chatBtn.textContent = "Чат";
+                chatBtn.onclick = () => {
+                    document.getElementById("chat_with").value = otherId;
+                    loadChat();
+                };
+                actions.appendChild(chatBtn);
+            } else if (inviteStatus.sent[otherId]) {
+                const info = document.createElement("div");
+                info.className = "user-meta";
+                info.textContent = "Ожидает ответа";
+                actions.appendChild(info);
+            } else if (inviteStatus.received[otherId]) {
+                const acceptBtn = document.createElement("button");
+                acceptBtn.textContent = "Принять";
+                acceptBtn.onclick = () => {
+                    sendInvite(my, otherId);
+                };
+                actions.appendChild(acceptBtn);
+            } else {
+                const inviteBtn = document.createElement("button");
+                inviteBtn.textContent = "Пригласить";
+                inviteBtn.onclick = () => {
+                    sendInvite(my, otherId);
+                };
+                actions.appendChild(inviteBtn);
+            }
+
+            div.appendChild(actions);
         }
 
         root.appendChild(div);
     });
 }
+
  
 async function sendInvite(from, to) {
     const res = await fetch("/api/invite", {
@@ -347,26 +379,80 @@ async function sendInvite(from, to) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ from_tg_id: from, to_tg_id: to })
     });
- 
+
     if (!res.ok) {
-        const err = await res.json();
-        return alert(err.detail || "Ошибка приглашения");
+        let msg = "Ошибка приглашения";
+        try {
+            const err = await res.json();
+            if (err.detail) msg = err.detail;
+        } catch (_) {}
+        alert(msg);
+        return;
     }
- 
-    loadInvites();
+
+    await loadInvites();
+    await loadUsers();
 }
  
 async function loadInvites() {
     const tg = getCurrentTgId();
+    const root = document.getElementById("invites");
+
+    if (!tg) {
+        root.innerHTML = "Укажите Telegram ID и сохраните профиль, чтобы видеть приглашения.";
+        return;
+    }
+
     const res = await fetch(`/api/invites?tg_id=${tg}`);
     const inv = await res.json();
-    const root = document.getElementById("invites");
+
+    // сбрасываем статусы
+    inviteStatus.sent = {};
+    inviteStatus.received = {};
+    inviteStatus.match = {};
+
+    // сначала заполняем sent/received
+    inv.forEach(r => {
+        if (r.from_tg_id === tg) {
+            inviteStatus.sent[r.to_tg_id] = true;
+        }
+        if (r.to_tg_id === tg) {
+            inviteStatus.received[r.from_tg_id] = true;
+        }
+    });
+
+    // теперь считаем матчи: там, где и sent, и received
+    Object.keys(inviteStatus.sent).forEach(idStr => {
+        const id = Number(idStr);
+        if (inviteStatus.received[id]) {
+            inviteStatus.match[id] = true;
+        }
+    });
+
+    // рендерим список приглашений
     root.innerHTML = "";
- 
+    if (!inv.length) {
+        root.textContent = "Пока нет приглашений.";
+        return;
+    }
+
     inv.forEach(r => {
         const div = document.createElement("div");
         div.className = "user-card";
-        div.textContent = `${r.from_tg_id === tg ? "Вы пригласили" : "Вас пригласили"} ${r.from_tg_id === tg ? r.to_tg_id : r.from_tg_id}`;
+
+        const isOutgoing = r.from_tg_id === tg;
+        const otherId = isOutgoing ? r.to_tg_id : r.from_tg_id;
+
+        let text = "";
+        if (inviteStatus.match[otherId]) {
+            text = `Матч с ${otherId}`;
+        } else if (isOutgoing) {
+            text = `Вы пригласили ${otherId}`;
+        } else {
+            text = `Вас пригласил ${otherId}`;
+        }
+
+        div.textContent = text;
         root.appendChild(div);
     });
 }
