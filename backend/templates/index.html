@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini-app тестовый интерфейс</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 16px;
+            background: #f5f5f5;
+        }
+ 
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+ 
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+ 
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+ 
+        label {
+            font-size: 13px;
+            margin-top: 8px;
+            display: block;
+        }
+ 
+        input, textarea {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #d0d0d0;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+ 
+        button {
+            margin-top: 6px;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            background: #007aff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+ 
+        button:active {
+            opacity: 0.85;
+        }
+ 
+        .users-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+ 
+        .user-card {
+            background: #fafafa;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+ 
+        .user-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+ 
+        .user-meta {
+            font-size: 13px;
+            color: #666;
+        }
+ 
+        #chat_messages {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 8px;
+            height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+ 
+    <div class="card">
+        <h1>Профиль</h1>
+        <form id="profile-form">
+            <label>Telegram ID</label>
+            <input id="tg_id" name="tg_id" type="number" required>
+ 
+            <label>Имя</label>
+            <input id="first_name" name="first_name" type="text" required>
+ 
+            <label>Фамилия</label>
+            <input id="last_name" name="last_name" type="text">
+ 
+            <label>Возраст</label>
+            <input id="age" name="age" type="number" min="18" max="99">
+ 
+            <label>О себе</label>
+            <textarea id="about" name="about"></textarea>
+ 
+            <label>Напитки</label>
+            <input id="drinks" name="drinks" type="text">
+ 
+            <label>Темы общения</label>
+            <input id="topics" name="topics" type="text">
+ 
+            <label>Локация</label>
+            <input id="location" name="location" type="text">
+ 
+            <label>Баланс</label>
+            <div id="balance_display">0 ₽</div>
+            <button type="button" onclick="addTestBalance()">+100 ₽ (тест)</button>
+ 
+            <label>Подписка</label>
+            <div id="sub_status">нет</div>
+            <button type="button" onclick="activateTestSubscription()">Включить подписку (тест)</button>
+ 
+            <br><br>
+            <button type="submit">Сохранить профиль</button>
+            <div id="form-status"></div>
+        </form>
+    </div>
+ 
+    <div class="card">
+        <h1>Люди рядом</h1>
+        <div id="users" class="users-list"></div>
+    </div>
+ 
+    <div class="card">
+        <h1>Ваши приглашения</h1>
+        <div id="invites" class="users-list"></div>
+    </div>
+ 
+    <div class="card">
+        <h1>Чат</h1>
+        <label>Собеседник (tg_id):</label>
+        <input type="number" id="chat_with" placeholder="tg_id собеседника">
+ 
+        <div id="chat_messages"></div>
+ 
+        <div style="margin-top: 8px;">
+            <input id="chat_input" placeholder="Сообщение" style="width: 70%;">
+            <button onclick="sendChatMessage()">Отправить</button>
+        </div>
+    </div>
+ 
+</div>
+ 
+<script>
+function getCurrentTgId() {
+    const v = document.getElementById("tg_id").value;
+    return v ? Number(v) : null;
+}
+ 
+function updateBalanceDisplay(value) {
+    document.getElementById("balance_display").textContent = value.toFixed(2) + " ₽";
+}
+ 
+function updateSubscriptionDisplay(isActive) {
+    document.getElementById("sub_status").textContent = isActive ? "активна" : "нет";
+}
+ 
+async function addTestBalance() {
+    const tg = getCurrentTgId();
+    if (!tg) return alert("Сначала заполните профиль");
+ 
+    const res = await fetch("/api/balance/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ tg_id: tg, amount: 100 })
+    });
+ 
+    const data = await res.json();
+    updateBalanceDisplay(data.balance);
+    updateSubscriptionDisplay(data.is_subscribed);
+}
+ 
+async function activateTestSubscription() {
+    const tg = getCurrentTgId();
+    if (!tg) return alert("Сначала заполните профиль");
+ 
+    const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ tg_id: tg, active: true })
+    });
+ 
+    const data = await res.json();
+    updateBalanceDisplay(data.balance);
+    updateSubscriptionDisplay(data.is_subscribed);
+}
+ 
+async function saveProfile(e) {
+    e.preventDefault();
+    const tg = getCurrentTgId();
+ 
+    const payload = {
+        tg_id: tg,
+        first_name: first_name.value,
+        last_name: last_name.value || null,
+        age: age.value ? Number(age.value) : null,
+        about: about.value || null,
+        drinks: drinks.value || null,
+        topics: topics.value || null,
+        location: location.value || null
+    };
+ 
+    const res = await fetch("/api/profile", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+    });
+ 
+    const data = await res.json();
+    updateBalanceDisplay(data.balance);
+    updateSubscriptionDisplay(data.is_subscribed);
+ 
+    loadUsers();
+    loadInvites();
+    loadChat();
+}
+ 
+async function loadUsers() {
+    const res = await fetch("/api/users");
+    const users = await res.json();
+    const my = getCurrentTgId();
+ 
+    const root = document.getElementById("users");
+    root.innerHTML = "";
+ 
+    users.forEach(u => {
+        const div = document.createElement("div");
+        div.className = "user-card";
+        div.innerHTML = `
+            <div class="user-name">${u.first_name}${u.age ? ", "+u.age : ""}</div>
+            <div class="user-meta">${u.location || "нет локации"}</div>
+        `;
+ 
+        if (my && u.tg_id !== my) {
+            const inviteBtn = document.createElement("button");
+            inviteBtn.textContent = "Пригласить";
+            inviteBtn.onclick = () => sendInvite(my, u.tg_id);
+ 
+            const chatBtn = document.createElement("button");
+            chatBtn.textContent = "Чат";
+            chatBtn.onclick = () => {
+                document.getElementById("chat_with").value = u.tg_id;
+                loadChat();
+            };
+ 
+            div.appendChild(inviteBtn);
+            div.appendChild(chatBtn);
+        }
+ 
+        root.appendChild(div);
+    });
+}
+ 
+async function sendInvite(from, to) {
+    const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ from_tg_id: from, to_tg_id: to })
+    });
+ 
+    if (!res.ok) {
+        const err = await res.json();
+        return alert(err.detail || "Ошибка приглашения");
+    }
+ 
+    loadInvites();
+}
+ 
+async function loadInvites() {
+    const tg = getCurrentTgId();
+    const res = await fetch(`/api/invites?tg_id=${tg}`);
+    const inv = await res.json();
+    const root = document.getElementById("invites");
+    root.innerHTML = "";
+ 
+    inv.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "user-card";
+        div.textContent = `${r.from_tg_id === tg ? "Вы пригласили" : "Вас пригласили"} ${r.from_tg_id === tg ? r.to_tg_id : r.from_tg_id}`;
+        root.appendChild(div);
+    });
+}
+ 
+async function sendChatMessage() {
+    const from = getCurrentTgId();
+    const to = Number(document.getElementById("chat_with").value);
+    const text = document.getElementById("chat_input").value;
+ 
+    const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ from_tg_id: from, to_tg_id: to, text })
+    });
+ 
+    if (!res.ok) {
+        const err = await res.json();
+        return alert(err.detail || "Ошибка отправки");
+    }
+ 
+    document.getElementById("chat_input").value = "";
+    loadChat();
+}
+ 
+async function loadChat() {
+    const me = getCurrentTgId();
+    const other = Number(document.getElementById("chat_with").value);
+    if (!me || !other) return;
+ 
+    const res = await fetch(`/api/chat?user1=${me}&user2=${other}`);
+    const msgs = await res.json();
+    const root = document.getElementById("chat_messages");
+    root.innerHTML = "";
+ 
+    msgs.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "user-meta";
+        div.textContent = (m.from_tg_id === me ? "Вы: " : "Он/она: ") + m.text;
+        root.appendChild(div);
+    });
+}
+ 
+document.getElementById("profile-form").addEventListener("submit", saveProfile);
+ 
+setInterval(loadChat, 2000);
+</script>
+</body>
+</html>
