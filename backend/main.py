@@ -6,6 +6,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
  
 from .db import init_db, get_connection
+
+import sqlite3
  
 app = FastAPI()
 templates = Jinja2Templates(directory="backend/templates")
@@ -14,7 +16,12 @@ templates = Jinja2Templates(directory="backend/templates")
 @app.on_event("startup")
 def on_startup():
     init_db()
- 
+
+
+def get_db():
+    conn = sqlite3.connect("app.db")
+    conn.row_factory = sqlite3.Row
+    return conn
  
 class ProfileIn(BaseModel):
     tg_id: int
@@ -299,6 +306,75 @@ def get_chat(user1: int, user2: int):
     conn.close()
  
     return [MessageOut(**row) for row in rows]
+
+
+class DialogPreview(BaseModel):
+    other_tg_id: int
+    other_name: str
+    last_text: str
+    last_ts: str 
+
+
+@app.get("/api/dialogs", response_model=List[DialogPreview])
+def get_dialogs(tg_id: int):
+    """
+    Список диалогов для пользователя tg_id:
+    с кем переписывался, последний текст, время.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT
+            CASE
+                WHEN from_tg_id = ? THEN to_tg_id
+                ELSE from_tg_id
+            END AS other_id,
+            MAX(created_at) AS last_ts
+        FROM messages
+        WHERE from_tg_id = ? OR to_tg_id = ?
+        GROUP BY other_id
+        ORDER BY last_ts DESC
+        """,
+        (tg_id, tg_id, tg_id)
+    )
+    rows = cur.fetchall()
+
+    dialogs: List[DialogPreview] = []
+
+    for other_id, last_ts in rows:
+        cur.execute(
+            """
+            SELECT text
+            FROM messages
+            WHERE (from_tg_id = ? AND to_tg_id = ?)
+               OR (from_tg_id = ? AND to_tg_id = ?)
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (tg_id, other_id, other_id, tg_id)
+        )
+        row_msg = cur.fetchone()
+        last_text = row_msg[0] if row_msg else ""
+
+        cur.execute(
+            "SELECT first_name FROM users WHERE tg_id = ?",
+            (other_id,)
+        )
+        row_user = cur.fetchone()
+        other_name = row_user[0] if row_user else str(other_id)
+
+        dialogs.append(
+            DialogPreview(
+                other_tg_id=other_id,
+                other_name=other_name,
+                last_text=last_text,
+                last_ts=last_ts
+            )
+        )
+
+    return dialogs
  
  
 @app.post("/api/balance/add", response_model=BalanceResponse)

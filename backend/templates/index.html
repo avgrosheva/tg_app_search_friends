@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>  
+<head>
     <meta charset="UTF-8">
-    <title>Mini-app тестовый интерфейс</title>
+    <title>Friends mini-app</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -12,32 +12,48 @@
             padding: 16px;
             background: #f5f5f5;
         }
- 
-        .container {
+        .tabs {
             display: flex;
-            flex-direction: column;
-            gap: 16px;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px 6px;
+            border-radius: 999px;
+            border: none;
+            background: #e5e5ea;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: #007aff;
+            color: #fff;
+        }
+        .tab-page {
+            display: none;
+        }
+        .tab-page.active {
+            display: block;
         }
  
         .card {
             background: #fff;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            margin-bottom: 12px;
         }
- 
         h1 {
             margin: 0 0 10px 0;
             font-size: 18px;
         }
- 
         label {
             font-size: 13px;
             margin-top: 8px;
             display: block;
         }
- 
-        input, textarea {
+        input, textarea, select {
             width: 100%;
             padding: 6px 8px;
             font-size: 14px;
@@ -46,7 +62,9 @@
             margin-top: 4px;
             box-sizing: border-box;
         }
- 
+        textarea {
+            min-height: 60px;
+        }
         button {
             margin-top: 6px;
             padding: 6px 10px;
@@ -57,47 +75,67 @@
             cursor: pointer;
             font-size: 14px;
         }
- 
-        button:active {
-            opacity: 0.85;
-        }
- 
+        button:active { opacity: 0.85; }
         .users-list {
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
- 
         .user-card {
             background: #fafafa;
             padding: 8px;
-            border-radius: 6px;
+            border-radius: 8px;
             border: 1px solid #e0e0e0;
         }
- 
         .user-name {
             font-weight: 600;
             margin-bottom: 4px;
         }
- 
         .user-meta {
             font-size: 13px;
             color: #666;
+            margin-top: 2px;
         }
- 
         #chat_messages {
             background: #fafafa;
             border: 1px solid #e0e0e0;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 8px;
-            height: 200px;
+            height: 220px;
             overflow-y: auto;
+        }
+        .msg {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 80%;
+        }
+        .msg-me {
+            background: #007aff;
+            color: #fff;
+            margin-left: auto;
+            text-align: right;
+        }
+        .msg-other {
+            background: #e5e5ea;
+            color: #000;
+            margin-right: auto;
+            text-align: left;
         }
     </style>
 </head>
 <body>
-<div class="container">
  
+<div class="tabs">
+    <button class="tab-btn active" data-tab="profile" onclick="switchTab('profile')">Профиль</button>
+    <button class="tab-btn" data-tab="people" onclick="switchTab('people')">Люди</button>
+    <button class="tab-btn" data-tab="invites" onclick="switchTab('invites')">Приглашения</button>
+    <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Чат</button>
+</div>
+ 
+<!-- Профиль -->
+<div id="tab-profile" class="tab-page active">
     <div class="card">
         <h1>Профиль</h1>
         <form id="profile-form">
@@ -122,14 +160,25 @@
             <label>Темы общения</label>
             <input id="topics" name="topics" type="text">
  
-            <label>Локация</label>
-            <input id="location" name="location" type="text">
-
+            <label>Город</label>
+            <select id="city_select" onchange="onCityChange()">
+                <option value="">Выберите город</option>
+                <option value="Москва">Москва</option>
+                <option value="Санкт-Петербург">Санкт-Петербург</option>
+                <option value="Казань">Казань</option>
+                <option value="Екатеринбург">Екатеринбург</option>
+                <option value="Новосибирск">Новосибирск</option>
+                <option value="_other">Другой город</option>
+            </select>
+ 
+            <label>Локация (текстом)</label>
+            <input id="location" name="location" type="text" placeholder="Если выбрали 'Другой город' — введите здесь">
+ 
             <label>Геопозиция</label>
             <div id="geo_display">Не определена</div>
             <button type="button" onclick="requestLocation()">Определить геопозицию</button>
-            <input id="lat" type="hidden">
-            <input id="lon" type="hidden">
+            <input id="lat" name="lat" type="hidden">
+            <input id="lon" name="lon" type="hidden">
  
             <label>Баланс</label>
             <div id="balance_display">0 ₽</div>
@@ -144,15 +193,29 @@
             <div id="form-status"></div>
         </form>
     </div>
+</div>
  
+<!-- Люди рядом -->
+<div id="tab-people" class="tab-page">
     <div class="card">
         <h1>Люди рядом</h1>
         <div id="users" class="users-list"></div>
     </div>
+</div>
  
+<!-- Приглашения -->
+<div id="tab-invites" class="tab-page">
     <div class="card">
         <h1>Ваши приглашения</h1>
         <div id="invites" class="users-list"></div>
+    </div>
+</div>
+ 
+<!-- Чат + диалоги -->
+<div id="tab-chat" class="tab-page">
+    <div class="card">
+        <h1>Диалоги</h1>
+        <div id="dialogs" class="users-list"></div>
     </div>
  
     <div class="card">
@@ -164,39 +227,31 @@
  
         <div style="margin-top: 8px;">
             <input id="chat_input" placeholder="Сообщение" style="width: 70%;">
-            <button onclick="sendChatMessage()">Отправить</button>
+            <button type="button" onclick="sendChatMessage()">Отправить</button>
         </div>
     </div>
- 
 </div>
  
 <script>
-
+let myIsSubscribed = false;
 let inviteStatus = {
-    sent: {},     
-    received: {}, 
-    match: {}    
+    sent: {},
+    received: {},
+    match: {}
 };
-
-(function initTelegram() {
-    try {
-        const tg = window.Telegram && window.Telegram.WebApp;
-        if (!tg) return;
-
-        tg.expand(); // делает webapp на весь экран
-
-        const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-        if (user && user.id) {
-            const tgInput = document.getElementById("tg_id");
-            tgInput.value = user.id;
-            tgInput.readOnly = true; // чтобы не трогали руками
-        }
-    } catch (e) {
-        console.log("Telegram WebApp init error", e);
-    }
-})();
-
-
+let lastChatJson = "";
+ 
+// переключение вкладок
+function switchTab(tab) {
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
+    });
+    document.querySelectorAll(".tab-page").forEach(page => {
+        page.classList.toggle("active", page.id === "tab-" + tab);
+    });
+}
+ 
+// helpers
 function getCurrentTgId() {
     const v = document.getElementById("tg_id").value;
     return v ? Number(v) : null;
@@ -207,18 +262,75 @@ function updateBalanceDisplay(value) {
 }
  
 function updateSubscriptionDisplay(isActive) {
+    myIsSubscribed = !!isActive;
     document.getElementById("sub_status").textContent = isActive ? "активна" : "нет";
 }
  
+function distanceKm(lat1, lon1, lat2, lon2) {
+    function toRad(x) { return x * Math.PI / 180; }
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+ 
+// город из списка
+function onCityChange() {
+    const sel = document.getElementById("city_select");
+    const locInput = document.getElementById("location");
+ 
+    if (sel.value && sel.value !== "_other") {
+        locInput.value = sel.value;
+        locInput.readOnly = true;
+    } else {
+        locInput.readOnly = false;
+        if (sel.value !== "_other") {
+            locInput.value = "";
+        }
+    }
+}
+ 
+// гео
+function requestLocation() {
+    const geoDisplay = document.getElementById("geo_display");
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                document.getElementById("lat").value = latitude;
+                document.getElementById("lon").value = longitude;
+                geoDisplay.textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+            },
+            (err) => {
+                console.log("Geolocation error", err);
+                alert("Не удалось получить геопозицию. Разрешите доступ к геоданным.");
+            }
+        );
+    } else {
+        alert("Геолокация недоступна в этом окружении.");
+    }
+}
+ 
+// баланс / подписка (тест)
 async function addTestBalance() {
     const tg = getCurrentTgId();
-    if (!tg) return alert("Сначала заполните профиль");
+    if (!tg) return alert("Сначала заполните профиль и сохраните его.");
  
     const res = await fetch("/api/balance/add", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ tg_id: tg, amount: 100 })
     });
+ 
+    if (!res.ok) {
+        alert("Ошибка пополнения баланса");
+        return;
+    }
  
     const data = await res.json();
     updateBalanceDisplay(data.balance);
@@ -227,7 +339,7 @@ async function addTestBalance() {
  
 async function activateTestSubscription() {
     const tg = getCurrentTgId();
-    if (!tg) return alert("Сначала заполните профиль");
+    if (!tg) return alert("Сначала заполните профиль и сохраните его.");
  
     const res = await fetch("/api/subscribe", {
         method: "POST",
@@ -235,26 +347,39 @@ async function activateTestSubscription() {
         body: JSON.stringify({ tg_id: tg, active: true })
     });
  
+    if (!res.ok) {
+        alert("Ошибка изменения подписки");
+        return;
+    }
+ 
     const data = await res.json();
     updateBalanceDisplay(data.balance);
     updateSubscriptionDisplay(data.is_subscribed);
 }
  
-async function saveProfile(e) {
-    e.preventDefault();
-    const tg = getCurrentTgId();
+// профиль
+async function saveProfile(event) {
+    event.preventDefault();
+ 
+    const tgIdInput = document.getElementById("tg_id");
+    const tg = tgIdInput.value ? Number(tgIdInput.value) : null;
+    if (!tg) {
+        alert("Укажите Telegram ID");
+        return;
+    }
  
     const payload = {
         tg_id: tg,
-        first_name: first_name.value,
-        last_name: last_name.value || null,
-        age: age.value ? Number(age.value) : null,
-        about: about.value || null,
-        drinks: drinks.value || null,
-        topics: topics.value || null,
-        location: location.value || null,
-        lat: lat.value ? Number(lat.value) : null,
-        lon: lon.value ? Number(lon.value) : null
+        first_name: document.getElementById("first_name").value,
+        last_name: document.getElementById("last_name").value || null,
+        middle_name: null,
+        age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
+        about: document.getElementById("about").value || null,
+        drinks: document.getElementById("drinks").value || null,
+        topics: document.getElementById("topics").value || null,
+        location: document.getElementById("location").value || null,
+        lat: document.getElementById("lat").value ? Number(document.getElementById("lat").value) : null,
+        lon: document.getElementById("lon").value ? Number(document.getElementById("lon").value) : null
     };
  
     const res = await fetch("/api/profile", {
@@ -263,26 +388,39 @@ async function saveProfile(e) {
         body: JSON.stringify(payload)
     });
  
+    if (!res.ok) {
+        document.getElementById("form-status").textContent = "Ошибка сохранения профиля";
+        return;
+    }
+ 
     const data = await res.json();
     updateBalanceDisplay(data.balance);
     updateSubscriptionDisplay(data.is_subscribed);
+    document.getElementById("form-status").textContent = "Профиль сохранён";
  
-    loadUsers();
-    loadInvites();
+    await loadInvites();
+    await loadDialogs();
+    await loadChat();
+}
+ 
+// открыть чат с пользователем
+function openChatWith(otherId) {
+    document.getElementById("chat_with").value = otherId;
     loadChat();
 }
  
+// люди рядом
 async function loadUsers() {
     const res = await fetch("/api/users");
     const users = await res.json();
     const my = getCurrentTgId();
-
-    const myLat = parseFloat(document.getElementById("lat")?.value || "NaN");
-    const myLon = parseFloat(document.getElementById("lon")?.value || "NaN");
-
+ 
+    const myLat = parseFloat(document.getElementById("lat").value || "NaN");
+    const myLon = parseFloat(document.getElementById("lon").value || "NaN");
+ 
     const root = document.getElementById("users");
     root.innerHTML = "";
-
+ 
     let enriched = users.map(u => {
         let dist = null;
         if (!isNaN(myLat) && !isNaN(myLon) && u.lat !== null && u.lon !== null) {
@@ -290,59 +428,54 @@ async function loadUsers() {
         }
         return { ...u, distance_km: dist };
     });
-
-
+ 
     enriched.sort((a, b) => {
         if (a.distance_km == null && b.distance_km == null) return 0;
         if (a.distance_km == null) return 1;
         if (b.distance_km == null) return -1;
         return a.distance_km - b.distance_km;
     });
-
+ 
     enriched.forEach(u => {
         const div = document.createElement("div");
         div.className = "user-card";
-
+ 
         let title = u.first_name;
         if (u.age) title += ", " + u.age;
-
+ 
         const nameDiv = document.createElement("div");
         nameDiv.className = "user-name";
         nameDiv.textContent = title;
-
+ 
         const metaDiv = document.createElement("div");
         metaDiv.className = "user-meta";
-
+ 
         let locText = u.location || "нет локации";
         if (u.distance_km != null) {
             const km = u.distance_km;
             if (km < 1) {
-                locText += `• ~${Math.round(km * 1000)} м`;
+                locText += ` • ~${Math.round(km * 1000)} м`;
             } else {
-                locText += `• ~${km.toFixed(1)} км`;
+                locText += ` • ~${km.toFixed(1)} км`;
             }
         }
-
         metaDiv.textContent = locText;
-
+ 
         div.appendChild(nameDiv);
         div.appendChild(metaDiv);
-
+ 
         if (my && u.tg_id !== my) {
             const actions = document.createElement("div");
             actions.style.marginTop = "6px";
             actions.style.display = "flex";
             actions.style.gap = "6px";
-
+ 
             const otherId = u.tg_id;
-
+ 
             if (inviteStatus.match[otherId]) {
                 const chatBtn = document.createElement("button");
                 chatBtn.textContent = "Чат";
-                chatBtn.onclick = () => {
-                    document.getElementById("chat_with").value = otherId;
-                    loadChat();
-                };
+                chatBtn.onclick = () => openChatWith(otherId);
                 actions.appendChild(chatBtn);
             } else if (inviteStatus.sent[otherId]) {
                 const info = document.createElement("div");
@@ -364,22 +497,29 @@ async function loadUsers() {
                 };
                 actions.appendChild(inviteBtn);
             }
-
+ 
+            if (myIsSubscribed && !inviteStatus.match[otherId]) {
+                const chatBtn = document.createElement("button");
+                chatBtn.textContent = "Чат";
+                chatBtn.onclick = () => openChatWith(otherId);
+                actions.appendChild(chatBtn);
+            }
+ 
             div.appendChild(actions);
         }
-
+ 
         root.appendChild(div);
     });
 }
-
  
+// инвайты
 async function sendInvite(from, to) {
     const res = await fetch("/api/invite", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ from_tg_id: from, to_tg_id: to })
     });
-
+ 
     if (!res.ok) {
         let msg = "Ошибка приглашения";
         try {
@@ -389,29 +529,30 @@ async function sendInvite(from, to) {
         alert(msg);
         return;
     }
-
+ 
     await loadInvites();
-    await loadUsers();
 }
  
 async function loadInvites() {
     const tg = getCurrentTgId();
     const root = document.getElementById("invites");
-
+ 
     if (!tg) {
         root.innerHTML = "Укажите Telegram ID и сохраните профиль, чтобы видеть приглашения.";
+        inviteStatus.sent = {};
+        inviteStatus.received = {};
+        inviteStatus.match = {};
+        loadUsers();
         return;
     }
-
+ 
     const res = await fetch(`/api/invites?tg_id=${tg}`);
     const inv = await res.json();
-
-    // сбрасываем статусы
+ 
     inviteStatus.sent = {};
     inviteStatus.received = {};
     inviteStatus.match = {};
-
-    // сначала заполняем sent/received
+ 
     inv.forEach(r => {
         if (r.from_tg_id === tg) {
             inviteStatus.sent[r.to_tg_id] = true;
@@ -420,47 +561,100 @@ async function loadInvites() {
             inviteStatus.received[r.from_tg_id] = true;
         }
     });
-
-    // теперь считаем матчи: там, где и sent, и received
+ 
     Object.keys(inviteStatus.sent).forEach(idStr => {
         const id = Number(idStr);
         if (inviteStatus.received[id]) {
             inviteStatus.match[id] = true;
         }
     });
-
-    // рендерим список приглашений
+ 
     root.innerHTML = "";
-    if (!inv.length) {
+ 
+    const ids = new Set([
+        ...Object.keys(inviteStatus.sent),
+        ...Object.keys(inviteStatus.received)
+    ]);
+ 
+    if (!ids.size) {
         root.textContent = "Пока нет приглашений.";
+    } else {
+        ids.forEach(idStr => {
+            const otherId = Number(idStr);
+            const div = document.createElement("div");
+            div.className = "user-card";
+ 
+            let text = "";
+            if (inviteStatus.match[otherId]) {
+                text = `Матч с ${otherId}`;
+            } else if (inviteStatus.sent[otherId] && !inviteStatus.received[otherId]) {
+                text = `Вы пригласили ${otherId}`;
+            } else if (inviteStatus.received[otherId] && !inviteStatus.sent[otherId]) {
+                text = `Вас пригласил ${otherId}`;
+            } else {
+                text = `Контакт ${otherId}`;
+            }
+ 
+            div.textContent = text;
+            root.appendChild(div);
+        });
+    }
+ 
+    loadUsers();
+}
+ 
+// диалоги
+async function loadDialogs() {
+    const me = getCurrentTgId();
+    const root = document.getElementById("dialogs");
+    root.innerHTML = "";
+ 
+    if (!me) {
+        root.textContent = "Сначала заполните профиль и сохраните его.";
         return;
     }
-
-    inv.forEach(r => {
+ 
+    const res = await fetch(`/api/dialogs?tg_id=${me}`);
+    if (!res.ok) {
+        root.textContent = "Не удалось загрузить диалоги.";
+        return;
+    }
+ 
+    const dialogs = await res.json();
+    if (!dialogs.length) {
+        root.textContent = "Пока нет диалогов.";
+        return;
+    }
+ 
+    dialogs.forEach(d => {
         const div = document.createElement("div");
         div.className = "user-card";
-
-        const isOutgoing = r.from_tg_id === tg;
-        const otherId = isOutgoing ? r.to_tg_id : r.from_tg_id;
-
-        let text = "";
-        if (inviteStatus.match[otherId]) {
-            text = `Матч с ${otherId}`;
-        } else if (isOutgoing) {
-            text = `Вы пригласили ${otherId}`;
-        } else {
-            text = `Вас пригласил ${otherId}`;
-        }
-
-        div.textContent = text;
+        div.style.cursor = "pointer";
+ 
+        const title = document.createElement("div");
+        title.className = "user-name";
+        title.textContent = d.other_name || d.other_tg_id;
+ 
+        const meta = document.createElement("div");
+        meta.className = "user-meta";
+        meta.textContent = d.last_text || "(пока без текста)";
+ 
+        div.appendChild(title);
+        div.appendChild(meta);
+ 
+        div.onclick = () => openChatWith(d.other_tg_id);
+ 
         root.appendChild(div);
     });
 }
  
+// чат
 async function sendChatMessage() {
     const from = getCurrentTgId();
     const to = Number(document.getElementById("chat_with").value);
     const text = document.getElementById("chat_input").value;
+ 
+    if (!from || !to || !text.trim()) return;
  
     const res = await fetch("/api/messages", {
         method: "POST",
@@ -469,12 +663,18 @@ async function sendChatMessage() {
     });
  
     if (!res.ok) {
-        const err = await res.json();
-        return alert(err.detail || "Ошибка отправки");
+        let msg = "Ошибка отправки сообщения";
+        try {
+            const err = await res.json();
+            if (err.detail) msg = err.detail;
+        } catch (_) {}
+        alert(msg);
+        return;
     }
  
     document.getElementById("chat_input").value = "";
-    loadChat();
+    await loadChat();
+    await loadDialogs();
 }
  
 async function loadChat() {
@@ -483,61 +683,52 @@ async function loadChat() {
     if (!me || !other) return;
  
     const res = await fetch(`/api/chat?user1=${me}&user2=${other}`);
+    if (!res.ok) return;
+ 
     const msgs = await res.json();
+    const jsonNow = JSON.stringify(msgs);
+    if (jsonNow === lastChatJson) {
+        return;
+    }
+    lastChatJson = jsonNow;
+ 
     const root = document.getElementById("chat_messages");
     root.innerHTML = "";
  
     msgs.forEach(m => {
         const div = document.createElement("div");
-        div.className = "user-meta";
+        div.className = "msg " + (m.from_tg_id === me ? "msg-me" : "msg-other");
         div.textContent = (m.from_tg_id === me ? "Вы: " : "Он/она: ") + m.text;
         root.appendChild(div);
     });
+ 
+    root.scrollTop = root.scrollHeight;
 }
  
-document.getElementById("profile-form").addEventListener("submit", saveProfile);
- 
-setInterval(loadChat, 2000);
-
-function requestLocation() {
-    const geoDisplay = document.getElementById("geo_display");
-
-    // 1. Пытаемся через браузерное гео (работает и внутри WebView Телеграма)
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const { latitude, longitude } = pos.coords;
-                document.getElementById("lat").value = latitude;
-                document.getElementById("lon").value = longitude;
-                geoDisplay.textContent = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-            },
-            (err) => {
-                console.log("Geolocation error", err);
-                alert("Не удалось получить геопозицию. Разрешите доступ к геоданным.");
-            }
-        );
-        return;
+// Telegram WebApp init
+(function initTelegram() {
+    try {
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg) return;
+        tg.expand();
+        const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+        if (user && user.id) {
+            const tgInput = document.getElementById("tg_id");
+            tgInput.value = user.id;
+            tgInput.readOnly = true;
+        }
+    } catch (e) {
+        console.log("Telegram WebApp init error", e);
     }
-
-    // запасной вариант — если гео совсем недоступно
-    alert("Геолокация недоступна в этом окружении.");
-}
-
-function distanceKm(lat1, lon1, lat2, lon2) {
-    function toRad(x) { return x * Math.PI / 180; }
-
-    const R = 6371; // радиус Земли в км
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) * Math.pow(Math.sin(dLat / 2), 1) +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // в км
-}
-
+})();
+ 
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("profile-form").addEventListener("submit", saveProfile);
+    switchTab("people"); // по умолчанию открываем вкладку "Люди"
+    loadInvites();
+    loadDialogs();
+    setInterval(loadChat, 2000); // автообновление только чата
+});
 </script>
 </body>
 </html>
