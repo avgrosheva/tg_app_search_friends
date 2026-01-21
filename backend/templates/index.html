@@ -6,104 +6,185 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-main: #0F0F0F;
+            --bg-card: #1B1B1B;
+            --bg-input: #232323;
+            --border-subtle: #2A2A2A;
+            --accent: #D9333A;
+            --accent-soft: #C27C3C;
+            --text-main: #FFFFFF;
+            --text-muted: #A1A1A1;
+            --success: #3CC27C;
+        }
+ 
+        * {
+            box-sizing: border-box;
+        }
+ 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
             margin: 0;
-            padding: 16px;
-            background: #f5f5f5;
+            background: var(--bg-main);
+            color: var(--text-main);
         }
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
+ 
+        .app {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 16px 16px 72px; /* отступ под нижнее меню */
         }
-        .tab-btn {
-            flex: 1;
-            padding: 8px 6px;
-            border-radius: 999px;
-            border: none;
-            background: #e5e5ea;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .tab-btn.active {
-            background: #007aff;
-            color: #fff;
-        }
+ 
         .tab-page {
             display: none;
         }
+ 
         .tab-page.active {
             display: block;
         }
  
         .card {
-            background: #fff;
+            background: var(--bg-card);
             border-radius: 12px;
             padding: 12px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-subtle);
             margin-bottom: 12px;
         }
+ 
         h1 {
             margin: 0 0 10px 0;
             font-size: 18px;
         }
+ 
         label {
             font-size: 13px;
             margin-top: 8px;
             display: block;
+            color: var(--text-muted);
         }
+ 
         input, textarea, select {
             width: 100%;
-            padding: 6px 8px;
+            padding: 8px 10px;
             font-size: 14px;
-            border-radius: 6px;
-            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
             margin-top: 4px;
-            box-sizing: border-box;
+            background: var(--bg-input);
+            color: var(--text-main);
         }
+ 
+        input::placeholder,
+        textarea::placeholder {
+            color: #707070;
+        }
+ 
         textarea {
             min-height: 60px;
+            resize: vertical;
         }
+ 
         button {
             margin-top: 6px;
-            padding: 6px 10px;
+            padding: 8px 14px;
             border: none;
             border-radius: 6px;
-            background: #007aff;
+            background: var(--accent);
             color: #fff;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
         }
-        button:active { opacity: 0.85; }
+ 
+        button:active {
+            opacity: 0.9;
+        }
+ 
+        .btn-secondary {
+            background: #1B1B1B;
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            font-weight: 500;
+        }
+ 
+        .btn-inline {
+            margin-top: 0;
+        }
+ 
         .users-list {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
         }
+ 
         .user-card {
-            background: #fafafa;
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            background: #151515;
+            padding: 12px;
+            border-radius: 14px;
+            border: 1px solid var(--border-subtle);
         }
-        .user-name {
-            font-weight: 600;
+ 
+        .user-card:hover {
+            border-color: #3A3A3A;
+        }
+ 
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
             margin-bottom: 4px;
         }
+ 
+        .user-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+ 
+        .user-distance {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+ 
         .user-meta {
             font-size: 13px;
-            color: #666;
+            color: var(--text-muted);
             margin-top: 2px;
         }
+ 
+        .user-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+ 
+        .tag-pill {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #242424;
+            color: var(--text-muted);
+        }
+ 
+        .user-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+ 
+        .user-actions > button {
+            flex: 1;
+        }
+ 
         #chat_messages {
-            background: #fafafa;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            background: #151515;
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
             padding: 8px;
             height: 220px;
             overflow-y: auto;
         }
+ 
         .msg {
             padding: 6px 8px;
             margin-bottom: 4px;
@@ -111,125 +192,230 @@
             font-size: 14px;
             max-width: 80%;
         }
+ 
         .msg-me {
-            background: #007aff;
+            background: var(--accent);
             color: #fff;
             margin-left: auto;
             text-align: right;
         }
+ 
         .msg-other {
-            background: #e5e5ea;
-            color: #000;
+            background: #232323;
+            color: #fff;
             margin-right: auto;
             text-align: left;
+        }
+ 
+        .hint-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+ 
+        .section-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+ 
+        .badge-sub {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(201, 143, 76, 0.15);
+            color: var(--accent-soft);
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 6px;
+        }
+ 
+        .status-success {
+            color: var(--success);
+            font-size: 13px;
+        }
+ 
+        .status-error {
+            color: var(--accent);
+            font-size: 13px;
+        }
+ 
+        /* Нижняя навигация */
+        .bottom-nav {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 0;
+            width: 100%;
+            max-width: 420px;
+            background: #101010;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 0;
+            z-index: 100;
+        }
+ 
+        .bottom-nav-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 6px 0 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+        }
+ 
+        .bottom-nav-btn span {
+            font-size: 11px;
+        }
+ 
+        .bottom-nav-btn.active {
+            color: #fff;
+        }
+ 
+        .bottom-nav-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: transparent;
+        }
+ 
+        .bottom-nav-btn.active .bottom-nav-dot {
+            background: var(--accent);
         }
     </style>
 </head>
 <body>
  
-<div class="tabs">
-    <button class="tab-btn active" data-tab="profile" onclick="switchTab('profile')">Профиль</button>
-    <button class="tab-btn" data-tab="people" onclick="switchTab('people')">Люди</button>
-    <button class="tab-btn" data-tab="invites" onclick="switchTab('invites')">Приглашения</button>
-    <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">Чат</button>
-</div>
+<div class="app">
+    <!-- Профиль -->
+    <div id="tab-profile" class="tab-page">
+        <div class="card">
+            <div class="section-title-row">
+                <h1>Профиль</h1>
+                <span id="sub_badge" class="badge-sub" style="display:none;">Подписка активна</span>
+            </div>
+            <form id="profile-form">
+                <label>Telegram ID</label>
+                <input id="tg_id" name="tg_id" type="number" required>
  
-<!-- Профиль -->
-<div id="tab-profile" class="tab-page active">
-    <div class="card">
-        <h1>Профиль</h1>
-        <form id="profile-form">
-            <label>Telegram ID</label>
-            <input id="tg_id" name="tg_id" type="number" required>
+                <label>Имя</label>
+                <input id="first_name" name="first_name" type="text" required>
  
-            <label>Имя</label>
-            <input id="first_name" name="first_name" type="text" required>
+                <label>Фамилия</label>
+                <input id="last_name" name="last_name" type="text">
  
-            <label>Фамилия</label>
-            <input id="last_name" name="last_name" type="text">
+                <label>Возраст</label>
+                <input id="age" name="age" type="number" min="18" max="99">
  
-            <label>Возраст</label>
-            <input id="age" name="age" type="number" min="18" max="99">
+                <label>О себе</label>
+                <textarea id="about" name="about" placeholder="Коротко о себе..."></textarea>
  
-            <label>О себе</label>
-            <textarea id="about" name="about"></textarea>
+                <label>Напитки</label>
+                <input id="drinks" name="drinks" type="text" placeholder="Например: виски, вино, кофе">
  
-            <label>Напитки</label>
-            <input id="drinks" name="drinks" type="text">
+                <label>Темы общения</label>
+                <input id="topics" name="topics" type="text" placeholder="Например: музыка, IT, путешествия">
  
-            <label>Темы общения</label>
-            <input id="topics" name="topics" type="text">
+                <label>Город</label>
+                <select id="city_select" onchange="onCityChange()">
+                    <option value="">Выберите город</option>
+                    <option value="Москва">Москва</option>
+                    <option value="Санкт-Петербург">Санкт-Петербург</option>
+                    <option value="Казань">Казань</option>
+                    <option value="Екатеринбург">Екатеринбург</option>
+                    <option value="Новосибирск">Новосибирск</option>
+                    <option value="_other">Другой город</option>
+                </select>
  
-            <label>Город</label>
-            <select id="city_select" onchange="onCityChange()">
-                <option value="">Выберите город</option>
-                <option value="Москва">Москва</option>
-                <option value="Санкт-Петербург">Санкт-Петербург</option>
-                <option value="Казань">Казань</option>
-                <option value="Екатеринбург">Екатеринбург</option>
-                <option value="Новосибирск">Новосибирск</option>
-                <option value="_other">Другой город</option>
-            </select>
+                <label>Локация (текстом)</label>
+                <input id="location" name="location" type="text" placeholder="Если выбрали 'Другой город' — введите здесь">
  
-            <label>Локация (текстом)</label>
-            <input id="location" name="location" type="text" placeholder="Если выбрали 'Другой город' — введите здесь">
+                <label>Геопозиция</label>
+                <div id="geo_display" class="hint-text">Не определена</div>
+                <button type="button" class="btn-secondary" onclick="requestLocation()">Определить геопозицию</button>
+                <input id="lat" name="lat" type="hidden">
+                <input id="lon" name="lon" type="hidden">
  
-            <label>Геопозиция</label>
-            <div id="geo_display">Не определена</div>
-            <button type="button" onclick="requestLocation()">Определить геопозицию</button>
-            <input id="lat" name="lat" type="hidden">
-            <input id="lon" name="lon" type="hidden">
+                <label>Баланс</label>
+                <div id="balance_display">0 ₽</div>
+                <button type="button" class="btn-secondary" onclick="addTestBalance()">+100 ₽ (тест)</button>
  
-            <label>Баланс</label>
-            <div id="balance_display">0 ₽</div>
-            <button type="button" onclick="addTestBalance()">+100 ₽ (тест)</button>
+                <label>Подписка</label>
+                <div id="sub_status" class="hint-text">нет</div>
+                <button type="button" class="btn-secondary" onclick="activateTestSubscription()">Включить подписку (тест)</button>
  
-            <label>Подписка</label>
-            <div id="sub_status">нет</div>
-            <button type="button" onclick="activateTestSubscription()">Включить подписку (тест)</button>
- 
-            <br><br>
-            <button type="submit">Сохранить профиль</button>
-            <div id="form-status"></div>
-        </form>
-    </div>
-</div>
- 
-<!-- Люди рядом -->
-<div id="tab-people" class="tab-page">
-    <div class="card">
-        <h1>Люди рядом</h1>
-        <div id="users" class="users-list"></div>
-    </div>
-</div>
- 
-<!-- Приглашения -->
-<div id="tab-invites" class="tab-page">
-    <div class="card">
-        <h1>Ваши приглашения</h1>
-        <div id="invites" class="users-list"></div>
-    </div>
-</div>
- 
-<!-- Чат + диалоги -->
-<div id="tab-chat" class="tab-page">
-    <div class="card">
-        <h1>Диалоги</h1>
-        <div id="dialogs" class="users-list"></div>
-    </div>
- 
-    <div class="card">
-        <h1>Чат</h1>
-        <label>Собеседник (tg_id):</label>
-        <input type="number" id="chat_with" placeholder="tg_id собеседника">
- 
-        <div id="chat_messages"></div>
- 
-        <div style="margin-top: 8px;">
-            <input id="chat_input" placeholder="Сообщение" style="width: 70%;">
-            <button type="button" onclick="sendChatMessage()">Отправить</button>
+                <br><br>
+                <button type="submit">Сохранить профиль</button>
+                <div id="form-status" class="hint-text"></div>
+            </form>
         </div>
     </div>
+ 
+    <!-- Люди рядом -->
+    <div id="tab-people" class="tab-page">
+        <div class="card">
+            <div class="section-title-row">
+                <h1>Люди рядом</h1>
+            </div>
+            <div id="users" class="users-list"></div>
+        </div>
+    </div>
+ 
+    <!-- Матчи / Приглашения -->
+    <div id="tab-invites" class="tab-page">
+        <div class="card">
+            <h1>Матчи и приглашения</h1>
+            <div id="invites" class="users-list"></div>
+        </div>
+    </div>
+ 
+    <!-- Чат + диалоги -->
+    <div id="tab-chat" class="tab-page">
+        <div class="card">
+            <h1>Диалоги</h1>
+            <div id="dialogs" class="users-list"></div>
+        </div>
+ 
+        <div class="card">
+            <h1>Чат</h1>
+            <label>Собеседник (tg_id):</label>
+            <input type="number" id="chat_with" placeholder="tg_id собеседника">
+ 
+            <div id="chat_messages"></div>
+ 
+            <div style="margin-top: 8px; display:flex; gap:8px;">
+                <input id="chat_input" placeholder="Сообщение" style="flex:1;">
+                <button type="button" onclick="sendChatMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+<!-- Нижнее меню -->
+<div class="bottom-nav">
+    <button class="bottom-nav-btn" data-tab="profile" onclick="switchTab('profile')">
+        <span>Профиль</span>
+        <div class="bottom-nav-dot"></div>
+    </button>
+    <button class="bottom-nav-btn" data-tab="people" onclick="switchTab('people')">
+        <span>Люди</span>
+        <div class="bottom-nav-dot"></div>
+    </button>
+    <button class="bottom-nav-btn" data-tab="invites" onclick="switchTab('invites')">
+        <span>Матчи</span>
+        <div class="bottom-nav-dot"></div>
+    </button>
+    <button class="bottom-nav-btn" data-tab="chat" onclick="switchTab('chat')">
+        <span>Чат</span>
+        <div class="bottom-nav-dot"></div>
+    </button>
 </div>
  
 <script>
@@ -243,11 +429,11 @@ let lastChatJson = "";
  
 // переключение вкладок
 function switchTab(tab) {
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.dataset.tab === tab);
-    });
     document.querySelectorAll(".tab-page").forEach(page => {
         page.classList.toggle("active", page.id === "tab-" + tab);
+    });
+    document.querySelectorAll(".bottom-nav-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tab);
     });
 }
  
@@ -264,6 +450,8 @@ function updateBalanceDisplay(value) {
 function updateSubscriptionDisplay(isActive) {
     myIsSubscribed = !!isActive;
     document.getElementById("sub_status").textContent = isActive ? "активна" : "нет";
+    const badge = document.getElementById("sub_badge");
+    badge.style.display = isActive ? "inline-flex" : "none";
 }
  
 function distanceKm(lat1, lon1, lat2, lon2) {
@@ -390,13 +578,16 @@ async function saveProfile(event) {
  
     if (!res.ok) {
         document.getElementById("form-status").textContent = "Ошибка сохранения профиля";
+        document.getElementById("form-status").className = "hint-text status-error";
         return;
     }
  
     const data = await res.json();
     updateBalanceDisplay(data.balance);
     updateSubscriptionDisplay(data.is_subscribed);
-    document.getElementById("form-status").textContent = "Профиль сохранён";
+    const fs = document.getElementById("form-status");
+    fs.textContent = "Профиль сохранён";
+    fs.className = "hint-text status-success";
  
     await loadInvites();
     await loadDialogs();
@@ -406,6 +597,7 @@ async function saveProfile(event) {
 // открыть чат с пользователем
 function openChatWith(otherId) {
     document.getElementById("chat_with").value = otherId;
+    switchTab("chat");
     loadChat();
 }
  
@@ -420,6 +612,11 @@ async function loadUsers() {
  
     const root = document.getElementById("users");
     root.innerHTML = "";
+ 
+    if (!users.length) {
+        root.innerHTML = '<div class="hint-text">Пока никого нет рядом.</div>';
+        return;
+    }
  
     let enriched = users.map(u => {
         let dist = null;
@@ -437,38 +634,59 @@ async function loadUsers() {
     });
  
     enriched.forEach(u => {
-        const div = document.createElement("div");
-        div.className = "user-card";
+        const card = document.createElement("div");
+        card.className = "user-card";
  
-        let title = u.first_name;
+        const header = document.createElement("div");
+        header.className = "user-header";
+ 
+        let title = u.first_name || "Без имени";
         if (u.age) title += ", " + u.age;
  
         const nameDiv = document.createElement("div");
         nameDiv.className = "user-name";
         nameDiv.textContent = title;
  
-        const metaDiv = document.createElement("div");
-        metaDiv.className = "user-meta";
- 
-        let locText = u.location || "нет локации";
+        const distDiv = document.createElement("div");
+        distDiv.className = "user-distance";
         if (u.distance_km != null) {
             const km = u.distance_km;
-            if (km < 1) {
-                locText += ` • ~${Math.round(km * 1000)} м`;
-            } else {
-                locText += ` • ~${km.toFixed(1)} км`;
-            }
+            distDiv.textContent = km < 1
+                ? `~${Math.round(km * 1000)} м`
+                : `~${km.toFixed(1)} км`;
+        } else {
+            distDiv.textContent = "";
         }
-        metaDiv.textContent = locText;
  
-        div.appendChild(nameDiv);
-        div.appendChild(metaDiv);
+        header.appendChild(nameDiv);
+        header.appendChild(distDiv);
+        card.appendChild(header);
+ 
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "user-meta";
+        metaDiv.textContent = u.location || "Локация не указана";
+        card.appendChild(metaDiv);
+ 
+        const tagsWrapper = document.createElement("div");
+        tagsWrapper.className = "user-tags";
+        const tags = [];
+        if (u.drinks) tags.push(u.drinks);
+        if (u.topics) tags.push(u.topics);
+ 
+        tags.forEach(t => {
+            const pill = document.createElement("div");
+            pill.className = "tag-pill";
+            pill.textContent = t;
+            tagsWrapper.appendChild(pill);
+        });
+ 
+        if (tags.length) {
+            card.appendChild(tagsWrapper);
+        }
  
         if (my && u.tg_id !== my) {
             const actions = document.createElement("div");
-            actions.style.marginTop = "6px";
-            actions.style.display = "flex";
-            actions.style.gap = "6px";
+            actions.className = "user-actions";
  
             const otherId = u.tg_id;
  
@@ -478,9 +696,10 @@ async function loadUsers() {
                 chatBtn.onclick = () => openChatWith(otherId);
                 actions.appendChild(chatBtn);
             } else if (inviteStatus.sent[otherId]) {
-                const info = document.createElement("div");
-                info.className = "user-meta";
+                const info = document.createElement("button");
+                info.className = "btn-secondary btn-inline";
                 info.textContent = "Ожидает ответа";
+                info.disabled = true;
                 actions.appendChild(info);
             } else if (inviteStatus.received[otherId]) {
                 const acceptBtn = document.createElement("button");
@@ -500,19 +719,20 @@ async function loadUsers() {
  
             if (myIsSubscribed && !inviteStatus.match[otherId]) {
                 const chatBtn = document.createElement("button");
+                chatBtn.className = "btn-secondary";
                 chatBtn.textContent = "Чат";
                 chatBtn.onclick = () => openChatWith(otherId);
                 actions.appendChild(chatBtn);
             }
  
-            div.appendChild(actions);
+            card.appendChild(actions);
         }
  
-        root.appendChild(div);
+        root.appendChild(card);
     });
 }
  
-// инвайты
+// инвайты / матчи
 async function sendInvite(from, to) {
     const res = await fetch("/api/invite", {
         method: "POST",
@@ -530,6 +750,12 @@ async function sendInvite(from, to) {
         return;
     }
  
+    try {
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+            Telegram.WebApp.HapticFeedback.impactOccurred("light");
+        }
+    } catch (e) {}
+ 
     await loadInvites();
 }
  
@@ -538,7 +764,7 @@ async function loadInvites() {
     const root = document.getElementById("invites");
  
     if (!tg) {
-        root.innerHTML = "Укажите Telegram ID и сохраните профиль, чтобы видеть приглашения.";
+        root.innerHTML = '<div class="hint-text">Укажите Telegram ID и сохраните профиль, чтобы видеть приглашения.</div>';
         inviteStatus.sent = {};
         inviteStatus.received = {};
         inviteStatus.match = {};
@@ -577,7 +803,7 @@ async function loadInvites() {
     ]);
  
     if (!ids.size) {
-        root.textContent = "Пока нет приглашений.";
+        root.innerHTML = '<div class="hint-text">Пока нет приглашений.</div>';
     } else {
         ids.forEach(idStr => {
             const otherId = Number(idStr);
@@ -610,19 +836,19 @@ async function loadDialogs() {
     root.innerHTML = "";
  
     if (!me) {
-        root.textContent = "Сначала заполните профиль и сохраните его.";
+        root.innerHTML = '<div class="hint-text">Сначала заполните профиль и сохраните его.</div>';
         return;
     }
  
     const res = await fetch(`/api/dialogs?tg_id=${me}`);
     if (!res.ok) {
-        root.textContent = "Не удалось загрузить диалоги.";
+        root.innerHTML = '<div class="hint-text">Не удалось загрузить диалоги.</div>';
         return;
     }
  
     const dialogs = await res.json();
     if (!dialogs.length) {
-        root.textContent = "Пока нет диалогов.";
+        root.innerHTML = '<div class="hint-text">Пока нет диалогов.</div>';
         return;
     }
  
@@ -631,15 +857,24 @@ async function loadDialogs() {
         div.className = "user-card";
         div.style.cursor = "pointer";
  
+        const header = document.createElement("div");
+        header.className = "user-header";
+ 
         const title = document.createElement("div");
         title.className = "user-name";
         title.textContent = d.other_name || d.other_tg_id;
  
+        const lastTs = document.createElement("div");
+        lastTs.className = "user-distance";
+        lastTs.textContent = ""; // можно позже красиво форматировать время
+ 
+        header.appendChild(title);
+        header.appendChild(lastTs);
+        div.appendChild(header);
+ 
         const meta = document.createElement("div");
         meta.className = "user-meta";
         meta.textContent = d.last_text || "(пока без текста)";
- 
-        div.appendChild(title);
         div.appendChild(meta);
  
         div.onclick = () => openChatWith(d.other_tg_id);
@@ -672,6 +907,12 @@ async function sendChatMessage() {
         return;
     }
  
+    try {
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+            Telegram.WebApp.HapticFeedback.impactOccurred("light");
+        }
+    } catch (e) {}
+ 
     document.getElementById("chat_input").value = "";
     await loadChat();
     await loadDialogs();
@@ -694,6 +935,11 @@ async function loadChat() {
  
     const root = document.getElementById("chat_messages");
     root.innerHTML = "";
+ 
+    if (!msgs.length) {
+        root.innerHTML = '<div class="hint-text">Пока нет сообщений.</div>';
+        return;
+    }
  
     msgs.forEach(m => {
         const div = document.createElement("div");
@@ -724,10 +970,11 @@ async function loadChat() {
  
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("profile-form").addEventListener("submit", saveProfile);
-    switchTab("people"); // по умолчанию открываем вкладку "Люди"
+    switchTab("people"); // по умолчанию открываем "Люди"
     loadInvites();
     loadDialogs();
     setInterval(loadChat, 2000); // автообновление только чата
+    loadUsers();
 });
 </script>
 </body>
