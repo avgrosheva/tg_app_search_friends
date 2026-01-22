@@ -289,6 +289,75 @@
         .bottom-nav-btn.active .bottom-nav-dot {
             background: var(--accent);
         }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 80px;
+            transform: translateX(-50%);
+            max-width: 380px;
+            padding: 10px 14px;
+            background: rgba(20, 20, 20, 0.95);
+            color: #fff;
+            border-radius: 999px;
+            font-size: 13px;
+            border: 1px solid #333;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+            z-index: 200;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
+
+        .match-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 300;
+        }
+
+        .match-overlay.show {
+            display: flex;
+        }
+
+        .match-modal {
+            background: #181818;
+            border-radius: 16px;
+            padding: 18px 16px 14px;
+            width: 90%;
+            max-width: 360px;
+            border: 1px solid #3A3A3A;
+            text-align: center;
+        }
+
+        .match-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .match-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        .match-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .match-buttons button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -385,8 +454,11 @@
  
         <div class="card">
             <h1>Чат</h1>
-            <label>Собеседник (tg_id):</label>
-            <input type="number" id="chat_with" placeholder="tg_id собеседника">
+            <div style="margin-bottom:8px;">
+            <div style="font-size:13px;color:#A1A1A1;">Чат с:</div>
+            <div id="chat_partner_label" style="font-size:15px;font-weight:600;margin-top:2px;">—</div>
+        </div>
+        <input type="hidden" id="chat_with">
  
             <div id="chat_messages"></div>
  
@@ -394,6 +466,22 @@
                 <input id="chat_input" placeholder="Сообщение" style="flex:1;">
                 <button type="button" onclick="sendChatMessage()">Отправить</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Match popup -->
+<div id="match_overlay" class="match-overlay">
+    <div class="match-modal">
+        <div class="match-title">Это матч!</div>
+        <div id="match_text" class="match-text">
+            Теперь вы можете пообщаться.
+        </div>
+        <div class="match-buttons">
+            <button type="button" class="btn-secondary" onclick="closeMatchPopup()">Потом</button>
+            <button type="button" onclick="goToChatFromMatch()">Перейти в чат</button>
         </div>
     </div>
 </div>
@@ -426,6 +514,8 @@ let inviteStatus = {
     match: {}
 };
 let lastChatJson = "";
+let previousMatches = [];
+let currentMatchUserId = null;
  
 // переключение вкладок
 function switchTab(tab) {
@@ -435,6 +525,15 @@ function switchTab(tab) {
     document.querySelectorAll(".bottom-nav-btn").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.tab === tab);
     });
+
+    if (tab === "people") {
+        loadUsers();
+    } else if (tab === "invites") {
+        loadInvites();
+    } else if (tab === "chat") {
+        loadDialogs();
+        loadChat();
+    }
 }
  
 // helpers
@@ -544,6 +643,41 @@ async function activateTestSubscription() {
     updateBalanceDisplay(data.balance);
     updateSubscriptionDisplay(data.is_subscribed);
 }
+
+function showMatchPopup(userId) {
+    currentMatchUserId = userId;
+    const overlay = document.getElementById("match_overlay");
+    const textEl = document.getElementById("match_text");
+    if (textEl) {
+        textEl.textContent = `У вас взаимный интерес с пользователем ${userId}. Можно перейти в чат.`;
+    }
+    if (overlay) {
+        overlay.classList.add("show");
+    }
+
+    try {
+        if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+            Telegram.WebApp.HapticFeedback.notificationOccurred("success");
+        }
+    } catch (e) {}
+}
+
+function closeMatchPopup() {
+    const overlay = document.getElementById("match_overlay");
+    if (overlay) {
+        overlay.classList.remove("show");
+    }
+    currentMatchUserId = null;
+}
+
+function goToChatFromMatch() {
+    if (!currentMatchUserId) {
+        closeMatchPopup();
+        return;
+    }
+    openChatWith(currentMatchUserId);
+    closeMatchPopup();
+}
  
 // профиль
 async function saveProfile(event) {
@@ -588,7 +722,26 @@ async function saveProfile(event) {
     const fs = document.getElementById("form-status");
     fs.textContent = "Профиль сохранён";
     fs.className = "hint-text status-success";
- 
+    showToast("Профиль сохранён");
+
+    saveProfileToLocal({
+        tg_id: tg,
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        age: payload.age,
+        about: payload.about,
+        drinks: payload.drinks,
+        topics: payload.topics,
+        location: payload.location,
+        lat: payload.lat,
+        lon: payload.lon,
+        balance: data.balance,
+        is_subscribed: data.is_subscribed
+    });
+
+    switchTab("people");
+    await loadUsers();
+
     await loadInvites();
     await loadDialogs();
     await loadChat();
@@ -597,6 +750,7 @@ async function saveProfile(event) {
 // открыть чат с пользователем
 function openChatWith(otherId) {
     document.getElementById("chat_with").value = otherId;
+    document.getElementById("chat_partner_label").textContent = otherId;
     switchTab("chat");
     loadChat();
 }
@@ -614,8 +768,8 @@ async function loadUsers() {
     root.innerHTML = "";
  
     if (!users.length) {
-        root.innerHTML = '<div class="hint-text">Пока никого нет рядом.</div>';
-        return;
+    root.innerHTML = '<div class="hint-text">Пока никого нет рядом. Попробуйте позже или уточните город/локацию в профиле.</div>';
+    return;
     }
  
     let enriched = users.map(u => {
@@ -739,23 +893,24 @@ async function sendInvite(from, to) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({ from_tg_id: from, to_tg_id: to })
     });
- 
+    
     if (!res.ok) {
         let msg = "Ошибка приглашения";
         try {
             const err = await res.json();
             if (err.detail) msg = err.detail;
         } catch (_) {}
-        alert(msg);
+        showToast(msg);
         return;
     }
- 
+
     try {
         if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
             Telegram.WebApp.HapticFeedback.impactOccurred("light");
         }
     } catch (e) {}
- 
+
+    showToast("Приглашение отправлено");
     await loadInvites();
 }
  
@@ -794,7 +949,16 @@ async function loadInvites() {
             inviteStatus.match[id] = true;
         }
     });
- 
+
+    const currentMatches = Object.keys(inviteStatus.match).map(Number);
+    const newMatches = currentMatches.filter(id => !previousMatches.includes(id));
+
+    if (newMatches.length > 0) {
+        showMatchPopup(newMatches[0]);
+    }
+
+    previousMatches = currentMatches;
+
     root.innerHTML = "";
  
     const ids = new Set([
@@ -803,8 +967,9 @@ async function loadInvites() {
     ]);
  
     if (!ids.size) {
-        root.innerHTML = '<div class="hint-text">Пока нет приглашений.</div>';
-    } else {
+        root.innerHTML = '<div class="hint-text">Пока нет приглашений или матчей. Пригласите кого-то из списка "Люди рядом".</div>';
+    } 
+    else {
         ids.forEach(idStr => {
             const otherId = Number(idStr);
             const div = document.createElement("div");
@@ -848,8 +1013,8 @@ async function loadDialogs() {
  
     const dialogs = await res.json();
     if (!dialogs.length) {
-        root.innerHTML = '<div class="hint-text">Пока нет диалогов.</div>';
-        return;
+    root.innerHTML = '<div class="hint-text">Пока нет диалогов. Матч или чат появятся здесь после приглашения и ответа.</div>';
+    return;
     }
  
     dialogs.forEach(d => {
@@ -937,8 +1102,8 @@ async function loadChat() {
     root.innerHTML = "";
  
     if (!msgs.length) {
-        root.innerHTML = '<div class="hint-text">Пока нет сообщений.</div>';
-        return;
+    root.innerHTML = '<div class="hint-text">Пока нет сообщений. Напишите что-нибудь первым.</div>';
+    return;
     }
  
     msgs.forEach(m => {
@@ -950,8 +1115,61 @@ async function loadChat() {
  
     root.scrollTop = root.scrollHeight;
 }
+
+let toastTimeout = null;
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add("show");
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2000);
+}
+
+const LOCAL_PROFILE_KEY = "miniapp_profile";
+
+function saveProfileToLocal(data) {
+    try {
+        localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.log("localStorage save error", e);
+    }
+}
+
+function loadProfileFromLocal() {
+    try {
+        const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        console.log("localStorage load error", e);
+        return null;
+    }
+}
+
+function applyProfileToForm(data) {
+    if (!data) return;
+    document.getElementById("tg_id").value = data.tg_id ?? "";
+    document.getElementById("first_name").value = data.first_name ?? "";
+    document.getElementById("last_name").value = data.last_name ?? "";
+    document.getElementById("age").value = data.age ?? "";
+    document.getElementById("about").value = data.about ?? "";
+    document.getElementById("drinks").value = data.drinks ?? "";
+    document.getElementById("topics").value = data.topics ?? "";
+    document.getElementById("location").value = data.location ?? "";
+    document.getElementById("lat").value = data.lat ?? "";
+    document.getElementById("lon").value = data.lon ?? "";
+
+    if (typeof data.balance === "number") {
+        updateBalanceDisplay(data.balance);
+    }
+    if (typeof data.is_subscribed === "boolean") {
+        updateSubscriptionDisplay(data.is_subscribed);
+    }
+}
  
-// Telegram WebApp init
 (function initTelegram() {
     try {
         const tg = window.Telegram && window.Telegram.WebApp;
@@ -970,10 +1188,17 @@ async function loadChat() {
  
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("profile-form").addEventListener("submit", saveProfile);
-    switchTab("people"); // по умолчанию открываем "Люди"
+
+    const localProfile = loadProfileFromLocal();
+    if (localProfile) {
+        applyProfileToForm(localProfile);
+    }
+
+    switchTab("people");
+
     loadInvites();
     loadDialogs();
-    setInterval(loadChat, 2000); // автообновление только чата
+    setInterval(loadChat, 2000);
     loadUsers();
 });
 </script>
