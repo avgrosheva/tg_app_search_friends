@@ -712,6 +712,30 @@
     let currentChatUser = null;
     let chatPollTimer = null;
     let matchesCache = [];
+
+    (function () {
+    const tg_id = window.__TG_ID__ || new URLSearchParams(location.search).get("tg_id");
+
+    const url = new URL(window.location.href);
+    let tgId = url.searchParams.get("tg_id");
+
+    if (!tgId && tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+      tgId = String(tg.initDataUnsafe.user.id);
+      url.searchParams.set("tg_id", tgId);
+      history.replaceState(null, "", url.toString()); 
+
+      try { tg.ready(); tg.expand(); } catch (e) {}
+    }
+
+    if (!tgId) {
+      console.warn("tg_id not found. Open app from Telegram bot button (web_app).");
+      alert("Не удалось распознать ID. Откройте мини-приложение через кнопку в Telegram-боте.");
+      return;
+    }
+    
+    window.__TG_ID__ = tgId;
+    
+    })();
  
     async function apiGet(url) {
         const res = await fetch(url);
