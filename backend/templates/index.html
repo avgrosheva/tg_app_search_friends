@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
 
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
     <style>
         :root {
@@ -1117,7 +1118,36 @@
         await loadUsers();
         await loadInvites();
     });
+
+    (function () {
+        const pre = document.createElement('pre');
+        pre.style.cssText = "padding:12px;background:#111;color:#0f0;white-space:pre-wrap;border-radius:12px;";
+        document.body.prepend(pre);
+
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+        const info = {
+        hasTelegramObject: !!window.Telegram,
+        hasWebApp: !!tg,
+        href: location.href,
+        initDataLength: tg?.initData ? tg.initData.length : 0,
+        initDataUnsafe: tg?.initDataUnsafe || null,
+        userId: tg?.initDataUnsafe?.user?.id || null,
+        };
+
+        pre.textContent = "DEBUG\n" + JSON.stringify(info, null, 2);
+
+        // Если userId есть, запишем в URL и в глобальную переменную
+        if (info.userId) {
+        const url = new URL(location.href);
+        url.searchParams.set("tg_id", String(info.userId));
+        history.replaceState(null, "", url.toString());
+        window.__TG_ID__ = String(info.userId);
+        try { tg.ready(); tg.expand(); } catch (e) {}
+        }
+    })();
 </script>
+
  
 </body>
 </html>
