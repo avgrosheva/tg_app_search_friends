@@ -713,6 +713,33 @@
     let currentChatUser = null;
     let chatPollTimer = null;
     let matchesCache = [];
+<<<<<<< HEAD
+=======
+
+    (function () {
+    const tg_id = window.__TG_ID__ || new URLSearchParams(location.search).get("tg_id");
+
+    const url = new URL(window.location.href);
+    let tgId = url.searchParams.get("tg_id");
+
+    if (!tgId && tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+      tgId = String(tg.initDataUnsafe.user.id);
+      url.searchParams.set("tg_id", tgId);
+      history.replaceState(null, "", url.toString()); 
+
+      try { tg.ready(); tg.expand(); } catch (e) {}
+    }
+
+    if (!tgId) {
+      console.warn("tg_id not found. Open app from Telegram bot button (web_app).");
+      alert("Не удалось распознать ID. Откройте мини-приложение через кнопку в Telegram-боте.");
+      return;
+    }
+    
+    window.__TG_ID__ = tgId;
+    
+    })();
+>>>>>>> 22033d963c2b70e7d691f5ca2092ba0b2e2ebd52
  
     async function apiGet(url) {
         const res = await fetch(url);
@@ -1079,6 +1106,7 @@
  
     document.addEventListener("DOMContentLoaded", async () => {
         showOnboardingIfNeeded();
+<<<<<<< HEAD
  
         const tg = window.Telegram.WebApp;
 
@@ -1094,11 +1122,56 @@ meId = tg.initDataUnsafe.user.id;
 
 document.getElementById("me_id_badge").textContent = id ${meId};
  
+=======
+ 
+        try {
+            const me = await apiGet("/api/tg_id");
+            meId = me.tg_id;
+            document.getElementById("me_id_badge").textContent = `id ${meId}`;
+        } catch (e) {
+            console.error(e);
+            showToast("Не удалось получить id пользователя");
+            return;
+        }
+ 
+>>>>>>> 22033d963c2b70e7d691f5ca2092ba0b2e2ebd52
         await loadProfile();
         await loadUsers();
         await loadInvites();
     });
+
+    (function () {
+        const pre = document.createElement('pre');
+        pre.style.cssText = "padding:12px;background:#111;color:#0f0;white-space:pre-wrap;border-radius:12px;";
+        document.body.prepend(pre);
+
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+        const info = {
+        hasTelegramObject: !!window.Telegram,
+        hasWebApp: !!tg,
+        href: location.href,
+        initDataLength: tg?.initData ? tg.initData.length : 0,
+        initDataUnsafe: tg?.initDataUnsafe || null,
+        userId: tg?.initDataUnsafe?.user?.id || null,
+        };
+
+        pre.textContent = "DEBUG\n" + JSON.stringify(info, null, 2);
+
+        // Если userId есть, запишем в URL и в глобальную переменную
+        if (info.userId) {
+        const url = new URL(location.href);
+        url.searchParams.set("tg_id", String(info.userId));
+        history.replaceState(null, "", url.toString());
+        window.__TG_ID__ = String(info.userId);
+        try { tg.ready(); tg.expand(); } catch (e) {}
+        }
+    })();
 </script>
+<<<<<<< HEAD
+=======
+
+>>>>>>> 22033d963c2b70e7d691f5ca2092ba0b2e2ebd52
  
 </body>
 </html>
