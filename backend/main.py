@@ -1,6 +1,6 @@
 from typing import Optional, List
  
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -287,25 +287,17 @@ def send_message(msg: MessageIn):
     return MessageOut(**row)
  
  
-@app.get("/api/chat", response_model=List[MessageOut])
-def get_chat(user1: int, user2: int):
-    conn = get_connection()
-    cur = conn.cursor()
- 
-    cur.execute(
-        """
-        SELECT * FROM messages
-        WHERE (from_tg_id = ? AND to_tg_id = ?)
-           OR (from_tg_id = ? AND to_tg_id = ?)
-        ORDER BY created_at ASC
-        """,
-        (user1, user2, user2, user1),
-    )
- 
-    rows = cur.fetchall()
-    conn.close()
- 
-    return [MessageOut(**row) for row in rows]
+@app.get("/api/chat")
+async def get_chat(tg_id: int, with_id: int, db=Depends(get_db)):
+    user1 = tg_id
+    user2 = with_id
+
+    msgs = db.execute(
+        "SELECT from_id, text, ts FROM messages WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?) ORDER BY ts ASC",
+        (user1, user2, user2, user1)
+    ).fetchall()
+
+    return [{"from": row[0], "text": row[1], "ts": row[2]} for row in msgs]
 
 
 class DialogPreview(BaseModel):
